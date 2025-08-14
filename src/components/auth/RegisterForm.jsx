@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import { registerSchema } from "../../validations/auth";
 import {
   Card,
   CardHeader,
@@ -14,13 +16,6 @@ import { Eye, EyeOff, Mail, Lock, User, Image } from "lucide-react";
 import toast from "react-hot-toast";
 
 const RegisterForm = () => {
-  const [formData, setFormData] = useState({
-    fullname: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    profileImageUrl: "",
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,25 +23,28 @@ const RegisterForm = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const {
+    values,
+    errors,
+    touched,
+    validFields,
+    handleChange,
+    handleBlur,
+    handleSubmit: validateAndSubmit,
+  } = useFormValidation(registerSchema, {
+    fullname: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    profileImageUrl: "",
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const { confirmPassword, ...registerData } = values;
       await register(registerData);
       toast.success("Registration successful!");
       navigate("/dashboard");
@@ -85,8 +83,12 @@ const RegisterForm = () => {
                   name="fullname"
                   type="text"
                   placeholder="Enter your full name"
-                  value={formData.fullname}
+                  value={values.fullname}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.fullname}
+                  touched={touched.fullname}
+                  isValid={validFields.fullname}
                   required
                   className="pl-10"
                 />
@@ -107,10 +109,14 @@ const RegisterForm = () => {
                   name="email"
                   type="email"
                   placeholder="Enter your email"
-                  value={formData.email}
+                  value={values.email}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.email}
+                  touched={touched.email}
                   required
                   className="pl-10"
+                  isValid={validFields.email}
                 />
               </div>
             </div>
@@ -129,8 +135,12 @@ const RegisterForm = () => {
                   name="profileImageUrl"
                   type="url"
                   placeholder="https://example.com/image.jpg"
-                  value={formData.profileImageUrl}
+                  value={values.profileImageUrl}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.profileImageUrl}
+                  touched={touched.profileImageUrl}
+                  isValid={validFields.profileImageUrl}
                   className="pl-10"
                 />
               </div>
@@ -150,10 +160,13 @@ const RegisterForm = () => {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  value={formData.password}
+                  value={values.password}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.password}
+                  touched={touched.password}
+                  isValid={validFields.password}
                   required
-                  minLength={6}
                   className="pl-10 pr-10"
                 />
                 <button
@@ -184,10 +197,13 @@ const RegisterForm = () => {
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
-                  value={formData.confirmPassword}
+                  value={values.confirmPassword}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.confirmPassword}
+                  touched={touched.confirmPassword}
+                  isValid={validFields.confirmPassword}
                   required
-                  minLength={6}
                   className="pl-10 pr-10"
                 />
                 <button

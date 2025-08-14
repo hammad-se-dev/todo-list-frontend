@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import { resetPasswordSchema } from "../../validations/auth";
 import {
   Card,
   CardHeader,
@@ -14,10 +16,6 @@ import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
 const ResetPasswordForm = () => {
-  const [formData, setFormData] = useState({
-    password: "",
-    confirmPassword: "",
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,6 +25,19 @@ const ResetPasswordForm = () => {
   const { token } = useParams();
   const navigate = useNavigate();
 
+  const {
+    values,
+    errors,
+    touched,
+    validFields,
+    handleChange,
+    handleBlur,
+    handleSubmit: validateAndSubmit,
+  } = useFormValidation(resetPasswordSchema, {
+    password: "",
+    confirmPassword: "",
+  });
+
   useEffect(() => {
     if (!token) {
       setTokenValid(false);
@@ -34,30 +45,12 @@ const ResetPasswordForm = () => {
     }
   }, [token]);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await authAPI.resetPassword(token, formData.password);
+      await authAPI.resetPassword(token, values.password);
       setSuccess(true);
       toast.success("Password reset successfully!");
     } catch (error) {
@@ -156,8 +149,12 @@ const ResetPasswordForm = () => {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter new password"
-                  value={formData.password}
+                  value={values.password}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.password}
+                  touched={touched.password}
+                  isValid={validFields.password}
                   required
                   className="pl-10 pr-10"
                 />
@@ -189,8 +186,12 @@ const ResetPasswordForm = () => {
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm new password"
-                  value={formData.confirmPassword}
+                  value={values.confirmPassword}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.confirmPassword}
+                  touched={touched.confirmPassword}
+                  isValid={validFields.confirmPassword}
                   required
                   className="pl-10 pr-10"
                 />

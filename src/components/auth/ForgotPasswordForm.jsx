@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import { forgotPasswordSchema } from "../../validations/auth";
 import {
   Card,
   CardHeader,
@@ -14,16 +16,27 @@ import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
 const ForgotPasswordForm = () => {
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  const {
+    values,
+    errors,
+    touched,
+    validFields,
+    handleChange,
+    handleBlur,
+    handleSubmit: validateAndSubmit,
+  } = useFormValidation(forgotPasswordSchema, {
+    email: "",
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await authAPI.forgotPassword(email);
+      await authAPI.forgotPassword(values);
       setEmailSent(true);
       toast.success("Password reset email sent successfully!");
     } catch (error) {
@@ -45,7 +58,8 @@ const ForgotPasswordForm = () => {
             </div>
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
-              We've sent a password reset link to <strong>{email}</strong>
+              We've sent a password reset link to{" "}
+              <strong>{values.email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -97,8 +111,12 @@ const ForgotPasswordForm = () => {
                   name="email"
                   type="email"
                   placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={errors.email}
+                  touched={touched.email}
+                  isValid={validFields.email}
                   required
                   className="pl-10"
                 />
