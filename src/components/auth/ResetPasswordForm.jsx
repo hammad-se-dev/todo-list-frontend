@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { authAPI } from "../../services/api";
 import { useFormValidation } from "../../hooks/useFormValidation";
-import { registerSchema } from "../../validations/auth";
+import { resetPasswordSchema } from "../../validations/auth";
 import {
   Card,
   CardHeader,
@@ -12,15 +12,17 @@ import {
 } from "../ui/Card";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
-import { Eye, EyeOff, Mail, Lock, User, Image } from "lucide-react";
+import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
-const RegisterForm = () => {
+const ResetPasswordForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [tokenValid, setTokenValid] = useState(true);
 
-  const { register } = useAuth();
+  const { token } = useParams();
   const navigate = useNavigate();
 
   const {
@@ -31,127 +33,114 @@ const RegisterForm = () => {
     handleChange,
     handleBlur,
     handleSubmit: validateAndSubmit,
-  } = useFormValidation(registerSchema, {
-    fullname: "",
-    email: "",
+  } = useFormValidation(resetPasswordSchema, {
     password: "",
     confirmPassword: "",
-    profileImageUrl: "",
   });
+
+  useEffect(() => {
+    if (!token) {
+      setTokenValid(false);
+      toast.error("Invalid reset token");
+    }
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registerData } = values;
-      await register(registerData);
-      toast.success("Registration successful!");
-      navigate("/dashboard");
+      await authAPI.resetPassword(token, values.password);
+      setSuccess(true);
+      toast.success("Password reset successfully!");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
+      toast.error(error.response?.data?.message || "Failed to reset password");
+      if (error.response?.status === 400) {
+        setTokenValid(false);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6 text-red-600" />
+            </div>
+            <CardTitle>Invalid Reset Link</CardTitle>
+            <CardDescription>
+              This password reset link is invalid or has expired
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 text-center">
+              Please request a new password reset link from the login page.
+            </p>
+            <div className="space-y-2">
+              <Link
+                to="/forgot-password"
+                className="flex items-center justify-center gap-2 text-sm text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Request new reset link
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <CardTitle>Password Reset Successful</CardTitle>
+            <CardDescription>
+              Your password has been reset successfully
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 text-center">
+              You can now log in with your new password.
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => navigate("/login")} className="w-full">
+                Go to Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
       <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-4">
-            <User className="w-6 h-6 text-primary-600" />
+            <Lock className="w-6 h-6 text-primary-600" />
           </div>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>
-            Enter your information to create your account
-          </CardDescription>
+          <CardTitle>Reset your password</CardTitle>
+          <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label
-                htmlFor="fullname"
-                className="text-sm font-medium text-gray-700"
-              >
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="fullname"
-                  name="fullname"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={values.fullname}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={errors.fullname}
-                  touched={touched.fullname}
-                  isValid={validFields.fullname}
-                  required
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={values.email}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={errors.email}
-                  touched={touched.email}
-                  required
-                  className="pl-10"
-                  isValid={validFields.email}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="profileImageUrl"
-                className="text-sm font-medium text-gray-700"
-              >
-                Profile Image URL (Optional)
-              </label>
-              <div className="relative">
-                <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="profileImageUrl"
-                  name="profileImageUrl"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={values.profileImageUrl}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={errors.profileImageUrl}
-                  touched={touched.profileImageUrl}
-                  isValid={validFields.profileImageUrl}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
                 htmlFor="password"
                 className="text-sm font-medium text-gray-700"
               >
-                Password
+                New Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -159,7 +148,7 @@ const RegisterForm = () => {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="Enter new password"
                   value={values.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -188,7 +177,7 @@ const RegisterForm = () => {
                 htmlFor="confirmPassword"
                 className="text-sm font-medium text-gray-700"
               >
-                Confirm Password
+                Confirm New Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -196,7 +185,7 @@ const RegisterForm = () => {
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm new password"
                   value={values.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -221,11 +210,11 @@ const RegisterForm = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Resetting..." : "Reset Password"}
             </Button>
 
             <div className="text-center text-sm text-gray-600">
-              Already have an account?{" "}
+              Remember your password?{" "}
               <Link
                 to="/login"
                 className="text-primary-600 hover:text-primary-700 hover:underline font-medium"
@@ -240,4 +229,4 @@ const RegisterForm = () => {
   );
 };
 
-export default RegisterForm;
+export default ResetPasswordForm;
